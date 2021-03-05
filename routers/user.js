@@ -1,16 +1,34 @@
 const express=require('express')
+const bcrypt=require('bcrypt')
 const {User,validateUser,validUpdate}=require('../models/user')
+// const config = require('config')
 
 const router=new express.Router()
 
 router.post('/user',async (req,res)=>{
 
     try{
+        // console.log(config.get("jwtPrivateKey"))
         const {error}=validateUser(req.body)
         if(error) return res.status(400).send(error.details[0].message)
-        let vendor_details=new User(req.body)
-        await vendor_details.save()
-        res.send(vendor_details)
+        let check_user=await User.findOne({email:req.body.email})
+        console.log("Its working")
+        if(check_user)
+            return res.status(400)
+                        .send("User with the same email ID is created")
+        
+        console.log("Its working")
+        
+        user_data=await User(req.body)
+        const salt=await bcrypt.genSalt(13)
+        user_data.password=await bcrypt.hash(user_data.password,salt)
+        console.log("Its working")
+        some_user=await user_data.save()
+        console.log("Its working")
+
+        const token=some_user.generateAuthToken()
+        console.log("Its working")
+        res.status(200).header("x-auth-token", token).send(_.omit(user_data, ["password"]))
     }catch(e){
         res.status(400).send(e)
     }
